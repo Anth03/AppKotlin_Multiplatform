@@ -1,194 +1,113 @@
 package com.example.applicationcompose
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import applicationcompose.composeapp.generated.resources.Res
+import applicationcompose.composeapp.generated.resources.eg
+import applicationcompose.composeapp.generated.resources.fr
+import applicationcompose.composeapp.generated.resources.id
+import applicationcompose.composeapp.generated.resources.jp
+import applicationcompose.composeapp.generated.resources.mx
+import kotlin.time.Clock
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
-import applicationcompose.composeapp.generated.resources.Res
-import applicationcompose.composeapp.generated.resources.compose_multiplatform
+data class Country(val name: String, val zone: TimeZone, val image: DrawableResource)
 
-fun formatTime(localTime: kotlinx.datetime.LocalTime): String {
-    val hour = localTime.hour.toString().padStart(2, '0')
-    val minute = localTime.minute.toString().padStart(2, '0')
-    val second = localTime.second.toString().padStart(2, '0')
-    return "$hour:$minute:$second"
+fun currentTimeAt(location: String, zone: TimeZone): String {
+    fun LocalTime.formatted() = "$hour:$minute:$second"
+    val time = Clock.System.now()
+    val localTime = time.toLocalDateTime(zone).time
+    return "The time in $location is ${localTime.formatted()}"
 }
 
-// Función que calcula la hora actual en una ubicación
-fun currentTimeAt(location: String, timeZoneId: String): String? {
-    return try {
-        val zone = TimeZone.of(timeZoneId)
-        val now = Clock.System.now()
-        val localTime = now.toLocalDateTime(zone).time
-        "The time in $location is ${formatTime(localTime)}"
-    } catch (e: IllegalTimeZoneException) {
-        null
-    }
-}
-
-// Data class para país con imagen
-data class Country(
-    val name: String,
-    val timeZone: String,
-    val flagResource: DrawableResource
-)
-
-// Lista de países con sus banderas
-val countries = listOf(
-    Country("Japan", "Asia/Tokyo", Res.drawable.japan),
-    Country("France", "Europe/Paris", Res.drawable.france),
-    Country("Mexico", "America/Mexico_City", Res.drawable.mexico),
-    Country("Indonesia", "Asia/Jakarta", Res.drawable.indonesia),
-    Country("Egypt", "Africa/Cairo", Res.drawable.egypt)
+val defaultCountries = listOf(
+    Country("Japan", TimeZone.of("Asia/Tokyo"), Res.drawable.jp),
+    Country("France", TimeZone.of("Europe/Paris"), Res.drawable.fr),
+    Country("Mexico", TimeZone.of("America/Mexico_City"), Res.drawable.mx),
+    Country("Indonesia", TimeZone.of("Asia/Jakarta"), Res.drawable.id),
+    Country("Egypt", TimeZone.of("Africa/Cairo"), Res.drawable.eg)
 )
 
 @Composable
-@Preview
-fun App() {
+fun App(countries: List<Country> = defaultCountries) {
     MaterialTheme {
-        var selectedCountry by remember { mutableStateOf(countries[0]) }
-        var timeAtLocation by remember { mutableStateOf("Select a country to see the time") }
-        var expanded by remember { mutableStateOf(false) }
+        var showCountries by remember { mutableStateOf(false) }
+        var timeAtLocation by remember { mutableStateOf("No location selected") }
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        Column(
+            modifier = Modifier
+                .padding(20.dp)
+                .safeContentPadding()
+                .fillMaxSize(),
         ) {
-            Column(
+            Text(
+                timeAtLocation,
+                style = TextStyle(fontSize = 20.sp),
+                textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Título
-                Text(
-                    text = "Local Time App",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 32.dp)
-                )
+                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally)
+            )
 
-                // Tarjeta que muestra la hora
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+            Row(modifier = Modifier.padding(start = 20.dp, top = 10.dp)) {
+                DropdownMenu(
+                    expanded = showCountries,
+                    onDismissRequest = { showCountries = false }
                 ) {
-                    Text(
-                        text = timeAtLocation,
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                // Dropdown menu con banderas
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCountry.name,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Select a country") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                    ) {
-                        countries.forEach { country ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        // Imagen de la bandera
-                                        Image(
-                                            painter = painterResource(country.flagResource),
-                                            contentDescription = "${country.name} flag",
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                        )
-                                        Text(
-                                            text = country.name,
-                                            fontSize = 16.sp
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    selectedCountry = country
-                                    expanded = false
+                    countries.forEach { (name, zone, image) ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painterResource(image),
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .padding(end = 10.dp),
+                                        contentDescription = "$name flag"
+                                    )
+                                    Text(name)
                                 }
-                            )
-                        }
+                            },
+                            onClick = {
+                                timeAtLocation = currentTimeAt(name, zone)
+                                showCountries = false
+                            }
+                        )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Botón para mostrar la hora
-                Button(
-                    onClick = {
-                        val time = currentTimeAt(selectedCountry.name, selectedCountry.timeZone)
-                        timeAtLocation = time ?: "Error: Invalid timezone"
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        text = "Show Current Time",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Texto informativo
-                Text(
-                    text = "Select a country and tap the button to see its current time",
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
+            Button(
+                modifier = Modifier.padding(start = 20.dp, top = 10.dp),
+                onClick = { showCountries = !showCountries }
+            ) {
+                Text("Select Location")
             }
         }
     }
